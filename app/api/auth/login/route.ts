@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { validateCredentials } from '@/lib/rabbitmq/client'
-import { setSessionCookie } from '@/lib/auth/session'
+import { COOKIE_NAME, createSession, sessionCookieOptions } from '@/lib/auth/session'
 import { classifyError } from '@/lib/rabbitmq/errors'
 import type { RabbitMQUser } from '@/lib/rabbitmq/types'
 
@@ -25,9 +25,14 @@ export async function POST(request: Request) {
     }
 
     const credentials = Buffer.from(`${username}:${password}`).toString('base64')
-    setSessionCookie(credentials, user)
+    const response = NextResponse.json({ authenticated: true, user })
+    response.cookies.set(
+      COOKIE_NAME,
+      JSON.stringify(createSession(credentials, user)),
+      sessionCookieOptions(request),
+    )
 
-    return NextResponse.json({ authenticated: true, user })
+    return response
   } catch (err) {
     const error = classifyError(err)
     return NextResponse.json({ error: error.message }, { status: error.status })
